@@ -1,0 +1,69 @@
+﻿# =========================
+# Python
+# =========================
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+# =========================
+# Virtual Environment
+# =========================
+
+venv/
+.venv/
+env/
+ENV/
+
+# =========================
+# IDE / Editor
+# =========================
+
+.vscode/
+.idea/
+
+# =========================
+# Environment / Secrets
+# =========================
+
+.env
+.env.*
+!.env.example
+
+# =========================
+# Runtime Generated Files
+# =========================
+
+events/*.mp4
+thumbs/*.jpg
+thumbs/*.jpeg
+thumbs/*.png
+
+# =========================
+# Temporary / Cache Files
+# =========================
+
+*.log
+*.tmp
+*.temp
+
+# =========================
+# OS Files
+# =========================
+
+.DS_Store
+Thumbs.db
+
+# =========================
+# Python Testing / Coverage
+# =========================
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+# =========================
+# Jupyter
+# =========================
+
+.ipynb_checkpoints/

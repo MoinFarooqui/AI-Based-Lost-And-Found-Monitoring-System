@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lost & Found AI Command Center</title>
+    <!-- Google Fonts: Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="brand">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Lost & Found" class="brand-logo"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+            <h2 class="brand-fallback" style="display:none;">L&amp;F</h2>
+            <div class="brand-text">
+                <span class="brand-name">Lost<span class="highlight">&amp;</span>Found</span>
+                <span class="brand-tag">Vision Monitoring</span>
+            </div>
+        </div>
+
+        <nav class="nav-menu" aria-label="Primary">
+            <a href="#dashboard" class="nav-link active" data-section="dashboard">
+                <i class="fa-solid fa-grid-2"></i> <span>Dashboard</span>
+            </a>
+            <a href="#live-feed" class="nav-link" data-section="live-feed">
+                <i class="fa-solid fa-video"></i> <span>Live Feed</span>
+            </a>
+            <a href="#events" class="nav-link" data-section="events">
+                <i class="fa-solid fa-bolt"></i> <span>Events</span>
+            </a>
+            <a href="#thumbs" class="nav-link" data-section="thumbs">
+                <i class="fa-solid fa-image"></i> <span>Snapshots</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>AI Surveillance Core</span>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+
+        <!-- Thin Enterprise Header -->
+        <header class="top-header">
+            <div class="header-titles">
+                <h1>AI Surveillance Command Center</h1>
+                <p>Real-time Object Detection &amp; Monitoring</p>
+            </div>
+            <div class="header-status">
+                <div class="status-item">
+                    <i class="fa-solid fa-satellite-dish"></i>
+                    <span id="currentSourceLabel">Live Webcam</span>
+                </div>
+                <div class="clock" id="liveClock">00:00:00</div>
+                <div class="status-badge">
+                    <span class="pulse-dot"></span> System Online
+                </div>
+            </div>
+        </header>
+
+        <div class="dashboard-wrapper">
+
+            <!-- Live Feed (hero) + compact monitoring side panel -->
+            <div id="dashboard" class="monitor-grid fade-in">
+
+                <!-- Live Stream Monitor — dominant focal point -->
+                <section id="live-feed" class="video-section">
+                    <div class="section-header">
+                        <h2><i class="fa-solid fa-satellite-dish"></i> Live Monitoring Feed</h2>
+                        <div class="live-indicator"><span class="red-dot"></span> LIVE</div>
+                    </div>
+                    <div class="video-container">
+                        <div class="corner top-left"></div>
+                        <div class="corner top-right"></div>
+                        <div class="corner bottom-left"></div>
+                        <div class="corner bottom-right"></div>
+                        <!-- Flask Video Feed -->
+                        <img id="videoFeedImg" src="{{ url_for('video_feed') }}" alt="Live CCTV feed">
+                    </div>
+                </section>
+
+                <!-- Compact monitoring side panel -->
+                <aside class="side-panel" aria-label="Monitoring controls">
+                    <div class="control-card">
+                        <h3><i class="fa-solid fa-sliders"></i> Input Source Control</h3>
+                        <div class="source-switcher" role="group" aria-label="Video source">
+                            <button class="source-btn active" onclick="changeVideoSource('0', this)">
+                                <i class="fa-solid fa-camera"></i> Live Webcam
+                            </button>
+                            <button class="source-btn" onclick="changeVideoSource('input/cctv_video1.mp4', this)">
+                                <i class="fa-solid fa-film"></i> Recorded Video
+                            </button>
+                            <button class="source-btn" onclick="changeVideoSource('rtsp://admin:12345@192.168.1.100:554/live', this)">
+                                <i class="fa-solid fa-cctv"></i> CCTV Feed
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="stats-card">
+                        <div class="stat-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div class="stat-info">
+                            <h4>Events Generated</h4>
+                            <span class="stat-value" id="eventsCount">{{ events_count }}</span>
+                        </div>
+                    </div>
+                </aside>
+
+            </div>
+
+            <!-- Events — industrial event log -->
+            <section id="events" class="events-section fade-in">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-clock-rotate-left"></i> Recent Events</h2>
+                    <span class="count-pill">{{ events | default([]) | length }} logged</span>
+                </div>
+                <div class="event-log" id="eventsContainer" aria-live="polite">
+                    {% for event in events %}
+                    <div class="event-row">
+                        <img class="event-thumb" src="{{ event.snapshot }}" alt="Detection snapshot at {{ event.time }}">
+                        <div class="event-info">
+                            <span class="event-status-badge">{{ event.status }}</span>
+                            <span class="event-time"><i class="fa-regular fa-clock"></i> {{ event.time }}</span>
+                            <span class="event-source"><i class="fa-solid fa-video"></i> {{ event.source | default("Unknown source") }}</span>
+                        </div>
+                        <a href="{{ event.video }}" target="_blank" rel="noopener" class="watch-link">
+                            <i class="fa-solid fa-play"></i> Watch
+                        </a>
+                    </div>
+                    {% endfor %}
+                    {% if not events %}
+                    <p class="empty-state">No events detected yet.</p>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Snapshots — full-frame evidence gallery -->
+            <section id="thumbs" class="snapshots-section fade-in">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-image"></i> Snapshots</h2>
+                </div>
+                <div class="snapshot-grid" id="snapshotsContainer" aria-live="polite">
+                    {% for snap in snapshots %}
+                    <div class="snapshot-tile">
+                        <img src="{{ snap }}" alt="Captured CCTV snapshot" loading="lazy">
+                    </div>
+                    {% endfor %}
+                    {% if not snapshots %}
+                    <p class="empty-state">No Snapshots Available</p>
+                    {% endif %}
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Custom Script -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // Little extra JS to handle the active class styling on the buttons
+        function updateActiveButton(clickedBtn) {
+            document.querySelectorAll('.source-btn').forEach(btn => btn.classList.remove('active'));
+            clickedBtn.classList.add('active');
+            const label = document.getElementById('currentSourceLabel');
+            if (label) label.textContent = clickedBtn.textContent.trim();
+        }
+
+        // Overriding the function slightly to add the visual update
+        const originalChangeSource = window.changeVideoSource;
+        window.changeVideoSource = function(source, btnElement) {
+            originalChangeSource(source);
+            if (btnElement) updateActiveButton(btnElement);
+        }
+    </script>
+</body>
+</html>

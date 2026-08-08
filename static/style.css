@@ -1,0 +1,998 @@
+/* ==========================================================================
+   Lost & Found — AI Surveillance Command Center
+   Industrial monitoring dashboard. Spotify green (#1ED760 / #1DB954) used
+   only as a controlled UI signal (active / online / operational) against a
+   deep matte-black system. Live feed is the hero; everything else is a
+   compact, information-dense operational panel.
+
+   Structure
+   1.  Design Tokens
+   2.  Reset & Base
+   3.  Scrollbar
+   4.  Layout Shell
+   5.  Sidebar
+   6.  Header
+   7.  Dashboard Wrapper / Fade-in
+   8.  Monitor Grid (live feed + side panel)
+   9.  Control Card & Source Switcher
+   10. Stats Card
+   11. Live Feed Viewport
+   12. Events Log
+   13. Snapshots Gallery (full-frame, no cropping)
+   14. Empty States
+   15. Responsive
+   ========================================================================== */
+
+/* ==========================================================================
+   1. Design Tokens
+   ========================================================================== */
+:root {
+  /* Surfaces — layered matte black, stepped elevation for real depth */
+  --bg-void: #0b0c0d;
+  --bg-panel: #161718;
+  --bg-elevated: #1f2021;
+  --bg-hover: #282929;
+  --bg-recessed: #000000;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-soft: rgba(255, 255, 255, 0.045);
+
+  /* Signal color — true Spotify green, used only as a UI state signal */
+  --signal: #1db954;
+  --signal-glow: #1ed760;
+  --signal-dim: rgba(30, 215, 96, 0.12);
+  --signal-dim-strong: rgba(30, 215, 96, 0.22);
+  --signal-ring: rgba(30, 215, 96, 0.4);
+  --signal-shadow: rgba(30, 215, 96, 0.3);
+
+  /* Alert / status vocabulary — used sparingly, only for real alerts */
+  --alert: #f15361;
+  --alert-dim: rgba(241, 83, 97, 0.13);
+  --warn: #e2a23c;
+  --warn-dim: rgba(226, 162, 60, 0.13);
+
+  /* Text */
+  --text-primary: #f7f7f7;
+  --text-secondary: #9c9c9c;
+  --text-tertiary: #58595a;
+
+  /* Type */
+  --font: 'Poppins', sans-serif;
+
+  /* Radii — modest, consistent, never a "blob" */
+  --radius-lg: 12px;
+  --radius: 9px;
+  --radius-sm: 7px;
+  --radius-pill: 999px;
+
+  /* Motion — fast and quiet */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --t-fast: 0.15s var(--ease);
+  --t-med: 0.28s var(--ease);
+
+  /* Elevation — one restrained shadow step */
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 24px rgba(0, 0, 0, 0.32);
+  --shadow-panel-lg: 0 2px 4px rgba(0, 0, 0, 0.4), 0 24px 48px rgba(0, 0, 0, 0.4);
+  --shadow-glow-sm: 0 0 0 1px var(--signal-ring), 0 0 14px var(--signal-shadow);
+
+  /* Layout */
+  --sidebar-w: 232px;
+  --gutter: 28px;
+}
+
+/* ==========================================================================
+   2. Reset & Base
+   ========================================================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font);
+  background-color: var(--bg-void);
+  color: var(--text-primary);
+  display: flex;
+  min-height: 100vh;
+  overflow-x: hidden;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--signal-glow);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   3. Scrollbar
+   ========================================================================== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-void);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-elevated);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--signal);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-elevated) var(--bg-void);
+}
+
+/* ==========================================================================
+   4. Layout Shell
+   ========================================================================== */
+.main-content {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* ==========================================================================
+   5. Sidebar
+   ========================================================================== */
+.sidebar {
+  width: var(--sidebar-w);
+  background-color: var(--bg-recessed);
+  border-right: 1px solid var(--border-soft);
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  height: 100vh;
+  z-index: 10;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 4px 8px 20px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.brand-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.brand-fallback {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--signal-dim);
+  color: var(--signal-glow);
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.brand-name {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brand-name .highlight {
+  color: var(--signal-glow);
+}
+
+.brand-tag {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.nav-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.nav-link {
+  position: relative;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  transition: background var(--t-fast), color var(--t-fast);
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.nav-link i {
+  font-size: 13px;
+  width: 16px;
+  text-align: center;
+  color: var(--text-tertiary);
+  transition: color var(--t-fast);
+}
+
+.nav-link:hover {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.nav-link:hover i {
+  color: var(--text-secondary);
+}
+
+.nav-link.active {
+  background-color: var(--signal-dim);
+  color: var(--text-primary);
+}
+
+.nav-link.active i {
+  color: var(--signal-glow);
+}
+
+.nav-link.active::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 56%;
+  background: var(--signal-glow);
+  border-radius: 0 3px 3px 0;
+}
+
+.sidebar-footer {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 12px 4px;
+  margin-top: 8px;
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-tertiary);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+.sidebar-footer i {
+  color: var(--signal-glow);
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+/* ==========================================================================
+   6. Header
+   ========================================================================== */
+.top-header {
+  position: sticky;
+  top: 0;
+  background: rgba(11, 12, 13, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 15px var(--gutter);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  z-index: 5;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.header-titles h1 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.header-titles p {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  max-width: 200px;
+}
+
+.status-item i {
+  color: var(--signal-glow);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.status-item span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clock {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+}
+
+.status-badge {
+  background-color: var(--signal-dim);
+  color: var(--signal-glow);
+  padding: 6px 13px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--signal-dim-strong);
+  white-space: nowrap;
+}
+
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--signal-glow);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--signal-glow);
+  animation: pulse 2.2s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(30, 215, 96, 0.5); }
+  70%  { box-shadow: 0 0 0 7px rgba(30, 215, 96, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(30, 215, 96, 0); }
+}
+
+/* ==========================================================================
+   7. Dashboard Wrapper / Fade-in
+   ========================================================================== */
+.dashboard-wrapper {
+  padding: 22px var(--gutter) 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1680px;
+  width: 100%;
+}
+
+.fade-in {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.5s var(--ease), transform 0.5s var(--ease);
+}
+
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ==========================================================================
+   8. Monitor Grid — live feed (hero) + compact side panel
+   ========================================================================== */
+.monitor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2.5fr) minmax(260px, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ==========================================================================
+   9. Control Card & Source Switcher
+   ========================================================================== */
+.control-card {
+  position: relative;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  padding: 17px 18px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+}
+
+.control-card h3 {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-card h3 i {
+  color: var(--signal-glow);
+  font-size: 11px;
+}
+
+.source-switcher {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.source-btn {
+  background-color: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 10px 13px;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: inherit;
+  width: 100%;
+  text-align: left;
+}
+
+.source-btn i {
+  font-size: 12px;
+  width: 14px;
+  color: var(--text-tertiary);
+  transition: color var(--t-fast);
+  flex-shrink: 0;
+}
+
+.source-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.source-btn:hover i {
+  color: var(--text-secondary);
+}
+
+.source-btn.active {
+  background-color: var(--signal-dim);
+  color: var(--text-primary);
+  border-color: var(--signal-glow);
+}
+
+.source-btn.active i {
+  color: var(--signal-glow);
+}
+
+/* ==========================================================================
+   10. Stats Card
+   ========================================================================== */
+.stats-card {
+  position: relative;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  padding: 17px 18px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  box-shadow: var(--shadow-panel);
+}
+
+.stat-icon {
+  width: 38px;
+  height: 38px;
+  background: var(--warn-dim);
+  color: var(--warn);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.stat-info {
+  min-width: 0;
+}
+
+.stat-info h4 {
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 3px;
+}
+
+.stat-value {
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   11. Live Feed Viewport — the hero element
+   ========================================================================== */
+.video-section {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--shadow-panel-lg);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 13px;
+  padding: 0 2px;
+}
+
+.section-header h2 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.section-header h2 i {
+  color: var(--signal-glow);
+  font-size: 12px;
+}
+
+.live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--alert);
+  letter-spacing: 0.06em;
+  background: var(--alert-dim);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+}
+
+.red-dot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--alert);
+  border-radius: 50%;
+  animation: pulseRed 2s infinite;
+}
+
+@keyframes pulseRed {
+  0%   { box-shadow: 0 0 0 0 rgba(241, 83, 97, 0.55); }
+  70%  { box-shadow: 0 0 0 6px rgba(241, 83, 97, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(241, 83, 97, 0); }
+}
+
+.video-container {
+  position: relative;
+  width: 100%;
+  background-color: var(--bg-recessed);
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--bg-elevated);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 320px;
+}
+
+/* Corner brackets — restrained surveillance-console cue */
+.corner {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--signal-glow);
+  z-index: 2;
+  opacity: 0.85;
+  pointer-events: none;
+}
+.top-left     { top: 10px;    left: 10px;   border-right: none;  border-bottom: none; border-radius: 3px 0 0 0; }
+.top-right    { top: 10px;    right: 10px;  border-left: none;   border-bottom: none; border-radius: 0 3px 0 0; }
+.bottom-left  { bottom: 10px; left: 10px;   border-right: none;  border-top: none;    border-radius: 0 0 0 3px; }
+.bottom-right { bottom: 10px; right: 10px;  border-left: none;   border-top: none;    border-radius: 0 0 3px 0; }
+
+#videoFeedImg {
+  width: 100%;
+  max-height: 74vh;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-recessed);
+}
+
+/* ==========================================================================
+   12. Events Log — rows, real operational records
+   ========================================================================== */
+.events-section {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  padding: 17px 18px;
+  box-shadow: var(--shadow-panel);
+}
+
+.count-pill {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  background: var(--bg-elevated);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-weight: 500;
+}
+
+.event-log {
+  display: flex;
+  flex-direction: column;
+  max-height: 440px;
+  overflow-y: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+}
+
+.event-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  transition: background var(--t-fast);
+}
+
+.event-row:last-child {
+  border-bottom: none;
+}
+
+.event-row:hover {
+  background-color: var(--bg-elevated);
+}
+
+.event-thumb {
+  width: 56px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  background-color: var(--bg-recessed);
+  box-shadow: 0 0 0 1px var(--border-soft);
+}
+
+.event-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.event-status-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--alert);
+  background: var(--alert-dim);
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.event-time,
+.event-source {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.event-time i,
+.event-source i {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.event-source {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.watch-link {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.watch-link i {
+  font-size: 10px;
+}
+
+.watch-link:hover {
+  color: var(--signal-glow);
+  border-color: var(--signal-dim-strong);
+  background: var(--signal-dim);
+}
+
+/* ==========================================================================
+   13. Snapshots Gallery — full CCTV frame, never cropped or stretched
+   ========================================================================== */
+.snapshots-section {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  padding: 17px 18px;
+  box-shadow: var(--shadow-panel);
+}
+
+.snapshot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.snapshot-tile {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background-color: var(--bg-recessed);
+  border: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color var(--t-fast), box-shadow var(--t-med);
+}
+
+.snapshot-tile:hover {
+  border-color: var(--signal-dim-strong);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* object-fit: contain — the complete captured frame is always visible,
+   never cropped or stretched; any letterboxing is intentional */
+.snapshot-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background-color: var(--bg-recessed);
+  transition: transform var(--t-med);
+}
+
+.snapshot-tile:hover img {
+  transform: scale(1.03);
+}
+
+/* ==========================================================================
+   14. Empty States
+   ========================================================================== */
+.empty-state {
+  color: var(--text-tertiary);
+  font-size: 12.5px;
+  padding: 18px 4px;
+  grid-column: 1 / -1;
+}
+
+.event-log .empty-state {
+  padding: 20px 14px;
+}
+
+/* ==========================================================================
+   15. Responsive
+   ========================================================================== */
+
+/* 1600px and below — slightly tighter gutters */
+@media (max-width: 1600px) {
+  :root { --gutter: 24px; }
+}
+
+/* 1366px — laptop breakpoint: stack live feed above side panel,
+   side panel becomes a horizontal row of compact cards; snapshots 2–3/row */
+@media (max-width: 1366px) {
+  .monitor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .side-panel {
+    flex-direction: row;
+  }
+
+  .control-card,
+  .stats-card {
+    flex: 1;
+  }
+
+  .snapshot-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+}
+
+/* 1024px — sidebar collapses to icon rail */
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 72px;
+    padding: 20px 10px;
+  }
+
+  .brand-text,
+  .nav-link span,
+  .sidebar-footer span {
+    display: none;
+  }
+
+  .brand,
+  .nav-link,
+  .sidebar-footer {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .nav-link.active::before {
+    left: 0;
+  }
+
+  .main-content {
+    margin-left: 72px;
+  }
+
+  .header-titles p {
+    display: none;
+  }
+
+  .status-item {
+    display: none;
+  }
+
+  .side-panel {
+    flex-direction: column;
+  }
+}
+
+/* 900px — snapshots settle into 2/row on tablets */
+@media (max-width: 900px) {
+  .snapshot-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}
+
+/* 720px — headers/rows wrap gracefully, no horizontal overflow */
+@media (max-width: 720px) {
+  .top-header {
+    padding: 14px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .dashboard-wrapper {
+    padding: 18px 16px 32px;
+  }
+
+  .event-row {
+    flex-wrap: wrap;
+  }
+
+  .event-info {
+    order: 3;
+    width: 100%;
+  }
+
+  .watch-link {
+    margin-left: 0;
+  }
+}
+
+/* 480px — single-column snapshot gallery on small phones */
+@media (max-width: 480px) {
+  .snapshot-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .status-item,
+  .header-titles p {
+    display: none;
+  }
+}
