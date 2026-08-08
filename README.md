@@ -18,8 +18,10 @@ Once an unattended-object condition is detected, the system automatically create
 
 ## Demo / Reference
 
+ 
 A reference video demonstrating the system in action is available here:
 [View Demo](https://drive.google.com/file/d/1NGMaObPkVK4Dh9x6J6HZlngZ2VCYFJD4/view?usp=sharing)
+[View Demo 2](https://drive.google.com/file/d/1-0HEK94oUGlN5WPndMykmPwgUAWLo6K4/view?usp=sharing)
 
 ---
 
